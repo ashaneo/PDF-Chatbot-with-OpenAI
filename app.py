@@ -1,46 +1,61 @@
-#Importing the libraries
-import streamlit as st #for the web app
-from PyPDF2 import PdfReader #for reading the pdf
-from dotenv import load_dotenv #for loading the environment variables
-from langchain.text_splitter import RecursiveCharacterTextSplitter #for splitting the text into sentences
-from langchain.embeddings.openai import OpenAIEmbeddings #for embedding the sentences
-from langchain.vectorstores import FAISS #for storing the vectors
-from langchain.llms import OpenAI #for the language model
-from langchain.chains.question_answering import load_qa_chain #for loading the question answering chain
-from langchain.callbacks import get_openai_callback #for getting the callback
-import pickle #for loading the pickle files
-import os #for the environment variables
-from langchain.chat_models import ChatOpenAI #for the chat model
+# Importing the libraries
+from dotenv import load_dotenv
+import streamlit as st  # for the web app
+from PyPDF2 import PdfReader  # for reading the pdf
+from dotenv import load_dotenv  # for loading the environment variables
+# for splitting the text into sentences
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.embeddings.openai import OpenAIEmbeddings
+from langchain.vectorstores import FAISS  # for storing the vectors
+from langchain.llms import OpenAI  # for the language model
+# for loading the question answering chain
+from langchain.chains.question_answering import load_qa_chain
+from langchain.callbacks import get_openai_callback  # for getting the callback
+import pickle  # for loading the pickle files
+import os  # for the environment variables
+from langchain.chat_models import ChatOpenAI  # for the chat model
 
-#Building the UI components using Streamlit
-#Streamlit is a Python library that makes it easy to build beautiful apps for machine learning
+
+# Building the UI components using Streamlit
+# Streamlit is a Python library that makes it easy to build beautiful apps for machine learning
 st.header('ChatPDF v0.1')
 st.sidebar.header(":blue[Welcome to ChatPDF!]")
-pdf = st.file_uploader('Upload a PDF file with text in English. PDFs that only contain images will not be recognized.', type=['pdf']) 
+pdf = st.file_uploader(
+    'Upload a PDF file with text in English. PDFs that only contain images will not be recognized.', type=['pdf'])
 query = st.text_input('Ask question about the PDF you entered!', max_chars=300)
 
 txt = ""  # Initialize txt as an empty string
 
-#Using PyPDF2 to read the pdf
+# Using PyPDF2 to read the pdf
 try:
     pdf_doc = PdfReader(pdf)
-    for page in pdf_doc.pages: #for each page in the pdf
-        txt += page.extract_text() #extract the text from the page and add it to the txt variable
-        
-except Exception as e:
-    st.error(str(e)) #if there is an error, print the error
+    for page in pdf_doc.pages:  # for each page in the pdf
+        # extract the text from the page and add it to the txt variable
+        txt += page.extract_text()
 
-#Using the RecursiveCharacterTextSplitter to split the text into sentences
+except Exception as e:
+    st.error(str(e))  # if there is an error, print the error
+
+# Using the RecursiveCharacterTextSplitter to split the text into sentences
 text_split = RecursiveCharacterTextSplitter(
-            chunk_size=1000, # number of characters per chunk
-            chunk_overlap=200, # used to keep the context of a chunk intact with previous and next chunks
-            length_function=len
-        )
+    chunk_size=1000,  # number of characters per chunk
+    # used to keep the context of a chunk intact with previous and next chunks
+    chunk_overlap=200,
+    length_function=len
+)
 chunks = text_split.split_text(text=txt)
 
-#Loading the embeddings and the vector store using the FAISS library
-embeddings = OpenAIEmbeddings()
-vectorStore = FAISS.from_texts(chunks,embedding=embeddings)
+load_dotenv()
+
+# Loading the embeddings and the vector store using the FAISS library
+embeddings = OpenAIEmbeddings(openai_api_key=os.environ["OPENAI_API_KEY"])
+vectorStore = FAISS.from_texts(chunks, embedding=embeddings)
+
+print("Length of chunks:", len(chunks))
+for i, chunk in enumerate(chunks):
+    print(f"Chunk {i + 1}:", chunk)
+# Add more details about the embeddings object if needed
+print("Embeddings object:", embeddings)
 
 # Search on user's input query and return the most similar sentence
 # gpt-3.5-turbo is used as the language model because it is cost effective and has a good performance
@@ -61,4 +76,3 @@ with open(f"STORE_NAME.pkl", "wb") as f:
 # Loading the vector store
 with open(f"{store_name}.pkl", "rb") as f:
   vs = pickle.load(f)
-
